@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================
+         Purchase Order Form — Elks Requisition Workflow
+         ============================================================ -->
+    <record id="purchase_order_form_elks" model="ir.ui.view">
+        <field name="name">purchase.order.form.elks</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Hide ALL standard Odoo purchase buttons -->
+            <!-- Send RFQ #1 (draft state) -->
+            <xpath expr="//button[@name='action_rfq_send'][1]" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Confirm Order (sent state) -->
+            <xpath expr="//button[@id='bid_confirm']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Approve Order -->
+            <xpath expr="//button[@name='button_approve']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Send RFQ #2 (sent state) -->
+            <xpath expr="//button[@name='action_rfq_send'][2]" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Confirm Order (draft state) -->
+            <xpath expr="//button[@id='draft_confirm']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Upload Bill widget -->
+            <xpath expr="//widget[@name='purchase_file_uploader']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Send PO #3 (purchase state) -->
+            <xpath expr="//button[@name='action_rfq_send'][3]" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Acknowledge -->
+            <xpath expr="//button[@name='action_acknowledge']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Set to Draft (cancel state) -->
+            <xpath expr="//button[@name='button_draft']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Replace statusbar: show our approval pipeline -->
+            <xpath expr="//field[@name='state'][@widget='statusbar']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Our buttons + statusbar -->
+            <xpath expr="//header" position="inside">
+
+                <button name="action_submit"
+                        string="Submit Requisition"
+                        type="object" class="btn-primary"
+                        invisible="x_approval_state != 'draft'"/>
+
+                <button name="action_board_approve"
+                        string="Board Approve"
+                        type="object" class="btn-primary"
+                        invisible="x_approval_state != 'board'"/>
+
+                <button name="action_board_reject"
+                        string="Board Reject"
+                        type="object" class="btn-danger"
+                        invisible="x_approval_state != 'board'"/>
+
+                <button name="action_floor_approve"
+                        string="Floor Approve"
+                        type="object" class="btn-success"
+                        invisible="x_approval_state != 'floor'"/>
+
+                <button name="action_floor_reject"
+                        string="Floor Reject"
+                        type="object" class="btn-danger"
+                        invisible="x_approval_state != 'floor'"/>
+
+                <button name="action_reset_to_draft"
+                        string="Reset to Draft"
+                        type="object"
+                        invisible="x_approval_state != 'rejected'"/>
+
+                <button name="action_request_budget_transfer"
+                        string="Request Budget Transfer"
+                        type="object" class="btn-warning"
+                        invisible="not x_has_over_budget_lines"/>
+
+                <button name="action_mark_all_ordered"
+                        string="Mark All Ordered"
+                        type="object" class="btn-success"
+                        invisible="x_approval_state != 'approved'"
+                        confirm="This will mark all unordered line items as ordered and create journal entries. Continue?"/>
+
+                <field name="x_approval_state" widget="statusbar"
+                       statusbar_visible="draft,board,floor,approved"/>
+            </xpath>
+
+            <!-- Requesting info above the line items -->
+            <xpath expr="//notebook" position="before">
+                <group>
+                    <group>
+                        <field name="x_requesting_department_id"/>
+                        <field name="x_requesting_committee_id"/>
+                    </group>
+                    <group>
+                        <field name="x_maintenance_request_id"
+                               readonly="1"
+                               invisible="not x_maintenance_request_id"/>
+                    </group>
+                </group>
+            </xpath>
+
+            <!-- Hide Taxes column on order lines, add GL Account -->
+            <xpath expr="//field[@name='order_line']//field[@name='tax_ids']" position="attributes">
+                <attribute name="column_invisible">1</attribute>
+            </xpath>
+            <!-- Hide Discount column -->
+            <xpath expr="//field[@name='order_line']//field[@name='discount']" position="attributes">
+                <attribute name="column_invisible">1</attribute>
+            </xpath>
+            <!-- Add GL Account and budget columns before price_unit -->
+            <xpath expr="//field[@name='order_line']//field[@name='price_unit']" position="before">
+                <field name="x_elks_account_id" optional="show"
+                       domain="[('account_type', '=', 'expense')]"/>
+                <field name="x_budget_available" optional="show"/>
+                <field name="x_over_budget" column_invisible="1"/>
+            </xpath>
+            <!-- Color the Amount column red when over budget -->
+            <xpath expr="//field[@name='order_line']//field[@name='price_subtotal']" position="attributes">
+                <attribute name="decoration-danger">x_over_budget</attribute>
+            </xpath>
+            <!-- Add Ordered column and button after price_subtotal -->
+            <xpath expr="//field[@name='order_line']//field[@name='price_subtotal']" position="after">
+                <field name="x_ordered" optional="show"
+                       readonly="1"
+                       decoration-success="x_ordered"/>
+                <field name="x_ordered_date" optional="hide"/>
+                <button name="action_mark_ordered" type="object"
+                        icon="fa-check-circle"
+                        title="Mark as Ordered"
+                        invisible="x_ordered or parent.x_approval_state != 'approved'"/>
+                <button name="action_unmark_ordered" type="object"
+                        icon="fa-undo"
+                        title="Undo Ordered"
+                        invisible="not x_ordered or parent.x_approval_state != 'approved'"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Pivot — spending by department, committee, status
+         ============================================================ -->
+    <record id="purchase_order_pivot_elks" model="ir.ui.view">
+        <field name="name">purchase.order.pivot.elks</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_pivot"/>
+        <field name="arch" type="xml">
+            <!-- Replace vendor row with department -->
+            <xpath expr="//field[@name='partner_id']" position="replace">
+                <field name="x_requesting_department_id" type="row"/>
+                <field name="x_approval_state" type="col"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Graph — spending by department
+         ============================================================ -->
+    <record id="purchase_order_graph_elks" model="ir.ui.view">
+        <field name="name">purchase.order.graph.elks</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_graph"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="replace">
+                <field name="x_requesting_department_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Purchase Order List — add approval state column
+         ============================================================ -->
+    <record id="purchase_order_tree_elks" model="ir.ui.view">
+        <field name="name">purchase.order.list.elks</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_kpis_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state']" position="before">
+                <field name="x_approval_state" optional="show"
+                       decoration-info="x_approval_state in ('board', 'floor')"
+                       decoration-success="x_approval_state == 'approved'"
+                       decoration-danger="x_approval_state == 'rejected'"/>
+                <field name="x_requesting_department_id" optional="show"/>
+                <field name="x_requesting_committee_id" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Search filters
+         ============================================================ -->
+    <record id="purchase_order_search_elks" model="ir.ui.view">
+        <field name="name">purchase.order.search.elks</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.view_purchase_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='activities_exception']" position="after">
+                <separator/>
+                <filter name="filter_draft"
+                        string="Draft Requisitions"
+                        domain="[('x_approval_state', '=', 'draft')]"/>
+                <filter name="filter_board"
+                        string="Board Queue"
+                        domain="[('x_approval_state', '=', 'board')]"/>
+                <filter name="filter_floor"
+                        string="Floor Queue"
+                        domain="[('x_approval_state', '=', 'floor')]"/>
+                <filter name="filter_approved"
+                        string="Approved"
+                        domain="[('x_approval_state', '=', 'approved')]"/>
+                <filter name="filter_rejected"
+                        string="Rejected"
+                        domain="[('x_approval_state', '=', 'rejected')]"/>
+                <separator/>
+                <filter name="filter_this_month"
+                        string="This Month"
+                        domain="[('create_date', '&gt;=', (context_today()).strftime('%%Y-%%m-01'))]"/>
+                <separator/>
+                <filter name="group_approval"
+                        string="Lodge Status"
+                        context="{'group_by': 'x_approval_state'}"/>
+                <filter name="group_dept"
+                        string="Department"
+                        context="{'group_by': 'x_requesting_department_id'}"/>
+                <filter name="group_committee"
+                        string="Committee"
+                        context="{'group_by': 'x_requesting_committee_id'}"/>
+                <filter name="group_gl_account"
+                        string="GL Account"
+                        context="{'group_by': 'x_elks_account_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Rename standard menus and actions
+         ============================================================ -->
+    <!-- Override RFQ action name -->
+    <record id="purchase.purchase_rfq" model="ir.actions.act_window">
+        <field name="name">Requisitions</field>
+    </record>
+
+    <!-- Override the RFQ menu item label -->
+    <menuitem id="purchase.menu_purchase_rfq"
+              name="Requisitions"
+              action="purchase.purchase_rfq"
+              parent="purchase.menu_procurement_management"
+              sequence="0"/>
+
+    <!-- Override "Late" filter string to "Late Reqs" -->
+    <record id="purchase_order_search_late_rename" model="ir.ui.view">
+        <field name="name">purchase.order.search.late.rename</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.view_purchase_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='late']" position="attributes">
+                <attribute name="string">Late Reqs</attribute>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="reject_requisition_wizard_form" model="ir.ui.view">
+        <field name="name">elks.reject.requisition.wizard.form</field>
+        <field name="model">elks.reject.requisition.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reject Requisition">
+                <group>
+                    <field name="purchase_order_id" invisible="1"/>
+                    <field name="reject_stage" invisible="1"/>
+                    <field name="rejection_reason" placeholder="Why is this being rejected?"/>
+                </group>
+                <footer>
+                    <button name="action_confirm_reject"
+                            string="Reject" type="object"
+                            class="btn-danger"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

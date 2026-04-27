@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================
+         Override PO report: Requisition Request with custom columns
+         ============================================================ -->
+    <template id="report_purchaseorder_document_elks"
+              inherit_id="purchase.report_purchaseorder_document">
+
+        <!-- Title: "Request for Quotation" → "Requisition Request" -->
+        <xpath expr="//t[@t-set='layout_document_title']" position="replace">
+            <t t-set="layout_document_title">
+                <t t-if="o.state in ['draft', 'sent', 'to approve']">Requisition Request #<span t-field="o.name"/></t>
+                <t t-if="o.state == 'purchase'">Purchase Order #<span t-field="o.name"/></t>
+                <t t-if="o.state == 'cancel'">Cancelled Purchase Order #<span t-field="o.name"/></t>
+            </t>
+        </xpath>
+
+        <!-- Info block: Buyer → Requester, add Department and GL Account -->
+        <xpath expr="//div[@id='informations']" position="replace">
+            <div id="informations" class="row mb-4">
+                <div t-if="o.user_id" class="col">
+                    <strong>Requester</strong>
+                    <div t-field="o.user_id"/>
+                </div>
+                <div t-if="o.x_requesting_department_id" class="col">
+                    <strong>Department</strong>
+                    <div t-field="o.x_requesting_department_id"/>
+                </div>
+                <div t-if="o.x_requesting_committee_id" class="col">
+                    <strong>Committee</strong>
+                    <div t-field="o.x_requesting_committee_id"/>
+                </div>
+                <div t-if="o.state == 'purchase' and o.date_approve" class="col">
+                    <strong>Order Date:</strong>
+                    <p t-field="o.date_approve" t-options="{'date_only': 'true'}" class="m-0"/>
+                </div>
+                <div t-elif="o.date_order" class="col">
+                    <strong>Order Deadline:</strong>
+                    <p t-field="o.date_order" t-options="{'date_only': 'true'}" class="m-0"/>
+                </div>
+            </div>
+        </xpath>
+
+        <!-- Replace Discount header with GL Account -->
+        <xpath expr="//th[@name='th_discount']" position="replace">
+            <th name="th_gl_account" class="text-start"><strong>GL Account</strong></th>
+        </xpath>
+
+        <!-- Remove Taxes column header -->
+        <xpath expr="//th[@name='th_taxes']" position="replace"/>
+
+        <!-- Replace the line item body: remove Discount/Taxes cells,
+             add GL Account per line -->
+        <xpath expr="//table[hasclass('o_main_table')]//tbody" position="replace">
+            <tbody>
+                <t t-set="current_subtotal" t-value="0"/>
+                <t t-foreach="o.order_line.filtered(lambda l: l.display_type or l.product_qty != 0)" t-as="line">
+                    <t t-set="current_subtotal" t-value="current_subtotal + line.price_subtotal"/>
+                    <tr t-att-class="'fw-bolder o_line_section' if line.display_type == 'line_section' else 'fw-bold o_line_subsection' if line.display_type == 'line_subsection' else 'fst-italic o_line_note' if line.display_type == 'line_note' else ''">
+                        <t t-if="not line.display_type">
+                            <td id="product" class="text-start">
+                                <span t-field="line.name"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="line.product_qty"/>
+                                <span t-field="line.product_uom_id.name" groups="uom.group_uom"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="line.price_unit"/>
+                            </td>
+                            <td class="text-start">
+                                <span t-if="line.x_elks_account_id" t-field="line.x_elks_account_id"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="line.price_subtotal"
+                                    t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                            </td>
+                        </t>
+                        <t t-if="line.display_type in ('line_section', 'line_subsection')">
+                            <td colspan="99" id="section">
+                                <span t-field="line.name"/>
+                            </td>
+                            <t t-set="current_section" t-value="line"/>
+                            <t t-set="current_subtotal" t-value="0"/>
+                        </t>
+                        <t t-if="line.display_type == 'line_note'">
+                            <td colspan="99" id="note">
+                                <span t-field="line.name"/>
+                            </td>
+                        </t>
+                    </tr>
+                    <t t-if="current_section and (line_last or o.order_line[line_index+1].display_type in ('line_section', 'line_subsection'))">
+                        <tr class="is-subtotal text-end">
+                            <td colspan="99" id="subtotal">
+                                <strong class="mr16">Subtotal</strong>
+                                <span t-out="current_subtotal"
+                                    t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                            </td>
+                        </tr>
+                    </t>
+                </t>
+            </tbody>
+        </xpath>
+
+    </template>
+
+    <!-- ============================================================
+         Override quotation report title (fallback)
+         ============================================================ -->
+    <template id="report_purchasequotation_document_elks"
+              inherit_id="purchase.report_purchasequotation_document">
+        <xpath expr="//t[@t-set='layout_document_title']" position="replace">
+            <t t-set="layout_document_title">
+                <span>Requisition Request <span t-field="o.name"/></span>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Update report action filenames -->
+    <record id="purchase.action_report_purchase_order" model="ir.actions.report">
+        <field name="print_report_name">
+            (object.state in ('draft', 'sent') and 'Requisition Request - %s' % (object.name) or
+            'Purchase Order - %s' % (object.name))</field>
+    </record>
+
+    <record id="purchase.report_purchase_quotation" model="ir.actions.report">
+        <field name="print_report_name">'Requisition Request - %s' % (object.name)</field>
+    </record>
+
+</odoo>

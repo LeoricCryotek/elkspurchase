@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <!-- Lodge approval pipeline dashboard — replaces standard purchase KPIs -->
+    <t t-name="elkspurchase.PurchaseDashboard">
+        <div class="o_purchase_dashboard container-fluid py-3 border-bottom bg-view">
+            <div class="d-flex justify-content-center align-items-end gap-2 flex-wrap">
+                <div class="text-muted small me-2 pb-2">This Month</div>
+
+                <!-- Draft / Requisitions -->
+                <div class="p-0 cursor-pointer" t-on-click="setSearchContext"
+                     title="Draft Requisitions" filter_name="filter_draft,filter_this_month">
+                    <a href="#" class="btn purchase-dashboard-card p-2 text-truncate text-wrap text-center"
+                       t-attf-class="{{ purchaseData.elks.draft == 0
+                           ? 'bg-secondary-subtle text-secondary-emphasis'
+                           : 'bg-info-subtle text-info-emphasis' }}"
+                       style="min-width: 120px;">
+                        <div class="fs-2" t-out="purchaseData.elks.draft"/>
+                        Draft
+                    </a>
+                </div>
+
+                <!-- Board Queue -->
+                <div class="p-0 cursor-pointer" t-on-click="setSearchContext"
+                     title="Board Queue" filter_name="filter_board,filter_this_month">
+                    <a href="#" class="btn purchase-dashboard-card p-2 text-truncate text-wrap text-center"
+                       t-attf-class="{{ purchaseData.elks.board == 0
+                           ? 'bg-secondary-subtle text-secondary-emphasis'
+                           : 'bg-warning-subtle text-warning-emphasis' }}"
+                       style="min-width: 120px;">
+                        <div class="fs-2" t-out="purchaseData.elks.board"/>
+                        Board
+                    </a>
+                </div>
+
+                <!-- Floor Queue -->
+                <div class="p-0 cursor-pointer" t-on-click="setSearchContext"
+                     title="Floor Queue" filter_name="filter_floor,filter_this_month">
+                    <a href="#" class="btn purchase-dashboard-card p-2 text-truncate text-wrap text-center"
+                       t-attf-class="{{ purchaseData.elks.floor == 0
+                           ? 'bg-secondary-subtle text-secondary-emphasis'
+                           : 'bg-warning-subtle text-warning-emphasis' }}"
+                       style="min-width: 120px;">
+                        <div class="fs-2" t-out="purchaseData.elks.floor"/>
+                        Floor
+                    </a>
+                </div>
+
+                <!-- Approved -->
+                <div class="p-0 cursor-pointer" t-on-click="setSearchContext"
+                     title="Approved POs" filter_name="filter_approved,filter_this_month">
+                    <a href="#" class="btn purchase-dashboard-card p-2 text-truncate text-wrap text-center"
+                       t-attf-class="{{ purchaseData.elks.approved == 0
+                           ? 'bg-secondary-subtle text-secondary-emphasis'
+                           : 'bg-success-subtle text-success-emphasis' }}"
+                       style="min-width: 120px;">
+                        <div class="fs-2" t-out="purchaseData.elks.approved"/>
+                        Approved
+                    </a>
+                </div>
+
+                <!-- Rejected -->
+                <div class="p-0 cursor-pointer" t-on-click="setSearchContext"
+                     title="Rejected" filter_name="filter_rejected,filter_this_month">
+                    <a href="#" class="btn purchase-dashboard-card p-2 text-truncate text-wrap text-center"
+                       t-attf-class="{{ purchaseData.elks.rejected == 0
+                           ? 'bg-secondary-subtle text-secondary-emphasis'
+                           : 'bg-danger-subtle text-danger-emphasis' }}"
+                       style="min-width: 120px;">
+                        <div class="fs-2" t-out="purchaseData.elks.rejected"/>
+                        Rejected
+                    </a>
+                </div>
+
+                <!-- Approved Total $ -->
+                <div class="p-0">
+                    <div class="purchase-dashboard-card o_no_hover p-2 bg-100 text-center"
+                         style="min-width: 140px;">
+                        <div class="fs-2">
+                            $<t t-out="(purchaseData.elks.approved_total || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})"/>
+                        </div>
+                        Approved Spend
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

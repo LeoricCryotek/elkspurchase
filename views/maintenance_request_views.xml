@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Add "Create PO Request" button and PO smart button to maintenance form -->
+    <record id="maintenance_request_form_po" model="ir.ui.view">
+        <field name="name">maintenance.request.form.elkspurchase</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Add a button_box at the top of the sheet for smart buttons -->
+            <xpath expr="//sheet/div[hasclass('oe_title')]" position="before">
+                <div name="button_box" class="oe_button_box">
+                    <button name="action_view_purchase_orders"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-shopping-cart"
+                            invisible="x_purchase_order_count == 0">
+                        <field name="x_purchase_order_count"
+                               widget="statinfo"
+                               string="Purchase Orders"/>
+                    </button>
+                </div>
+            </xpath>
+
+            <!-- "Create PO Request" button in the header -->
+            <xpath expr="//header" position="inside">
+                <button name="action_create_po_request"
+                        string="Create PO Request"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-file-text-o"
+                        groups="elkspurchase.group_elks_committee"/>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="floor_vote_wizard_form" model="ir.ui.view">
+        <field name="name">elkspurchase.floor.vote.wizard.form</field>
+        <field name="model">elkspurchase.floor.vote.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Record Floor Vote">
+                <group>
+                    <field name="purchase_order_id" invisible="1"/>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="amount_total"/>
+                </group>
+                <group string="Vote Details">
+                    <group>
+                        <field name="vote_result" widget="radio"/>
+                        <field name="vote_date"/>
+                        <field name="motion_number"/>
+                    </group>
+                    <group>
+                        <field name="vote_for"/>
+                        <field name="vote_against"/>
+                    </group>
+                </group>
+                <group>
+                    <field name="notes" placeholder="Any conditions, amendments, or context..."/>
+                </group>
+                <footer>
+                    <button name="action_record_vote"
+                            string="Record Vote"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
