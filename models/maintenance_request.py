@@ -44,18 +44,12 @@ class MaintenanceRequest(models.Model):
         po_vals = {
             'x_maintenance_request_id': self.id,
             'origin': f"MR-{self.id}: {self.name}",
-            # x_funding_source removed in simplified workflow
             'notes': (
-                f"Generated from Maintenance Request: {self.name}\n"
-                f"Equipment: {self.equipment_id.name or 'N/A'}\n"
-                f"Request Type: {self.x_request_type or 'N/A'}\n"
-                f"Risk: {self.x_risk_type or 'N/A'}\n"
-                f"Priority Score: {self.x_priority_score}"
+                f"Generated from Maintenance Ticket: {self.name}\n"
+                f"Issue Type: {self.x_ticket_type or 'N/A'}\n"
+                f"Location: {self.x_location_id.name if self.x_location_id else 'N/A'}"
             ),
         }
-        # If maintenance has a GL account, carry it over (can be changed later)
-        if self.x_elks_account_id:
-            po_vals['x_elks_account_id'] = self.x_elks_account_id.id
 
         po = PO.create(po_vals)
 
