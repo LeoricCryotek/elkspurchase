@@ -33,6 +33,15 @@ class PurchaseOrder(models.Model):
     )
 
     # ------------------------------------------------------------------
+    # Requisition title / description
+    # ------------------------------------------------------------------
+    x_requisition_title = fields.Char(
+        "Requisition Title", tracking=True,
+        help="Short description of what this purchase is for, "
+             "e.g. 'Kitchen cooler replacement' or 'July 4th event supplies'.",
+    )
+
+    # ------------------------------------------------------------------
     # Core approval field
     # ------------------------------------------------------------------
     x_approval_state = fields.Selection(
