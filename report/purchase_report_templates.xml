@@ -42,16 +42,19 @@
             </div>
         </xpath>
 
-        <!-- Replace Discount header with GL Account -->
+        <!-- Replace Discount header with GL Account + Budget Remaining -->
         <xpath expr="//th[@name='th_discount']" position="replace">
             <th name="th_gl_account" class="text-start"><strong>GL Account</strong></th>
+            <th name="th_budget_remaining" class="text-end"><strong>Budget Remaining</strong></th>
         </xpath>
 
         <!-- Remove Taxes column header -->
         <xpath expr="//th[@name='th_taxes']" position="replace"/>
 
         <!-- Replace the line item body: remove Discount/Taxes cells,
-             add GL Account per line -->
+             add GL Account + Budget Remaining per line. Color the
+             budget cell red when this line would exceed the
+             account's remaining budget. -->
         <xpath expr="//table[hasclass('o_main_table')]//tbody" position="replace">
             <tbody>
                 <t t-set="current_subtotal" t-value="0"/>
@@ -72,7 +75,16 @@
                             <td class="text-start">
                                 <span t-if="line.x_elks_account_id" t-field="line.x_elks_account_id"/>
                             </td>
-                            <td class="text-end">
+                            <td class="text-end" t-att-class="'text-end text-danger fw-bold' if line.x_over_budget else 'text-end'">
+                                <t t-if="line.x_budget_line_id">
+                                    <span t-field="line.x_budget_available"
+                                        t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </t>
+                                <t t-else="">
+                                    <span class="text-muted">—</span>
+                                </t>
+                            </td>
+                            <td class="text-end" t-att-class="'text-end text-danger fw-bold' if line.x_over_budget else 'text-end'">
                                 <span t-field="line.price_subtotal"
                                     t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                             </td>
@@ -106,14 +118,68 @@
     </template>
 
     <!-- ============================================================
-         Override quotation report title (fallback)
+         Override quotation report:
+           - Retitle "Request for Quotation" → "Requisition Request"
+           - Add GL Account + Budget Remaining columns per line
          ============================================================ -->
     <template id="report_purchasequotation_document_elks"
               inherit_id="purchase.report_purchasequotation_document">
+
         <xpath expr="//t[@t-set='layout_document_title']" position="replace">
             <t t-set="layout_document_title">
                 <span>Requisition Request <span t-field="o.name"/></span>
             </t>
+        </xpath>
+
+        <!-- Add GL Account + Budget Remaining headers after Qty -->
+        <xpath expr="//th[@name='th_quantity']" position="after">
+            <th name="th_gl_account" class="text-start"><strong>GL Account</strong></th>
+            <th name="th_budget_remaining" class="text-end"><strong>Budget Remaining</strong></th>
+        </xpath>
+
+        <!-- Replace the body so each line carries the two new cells,
+             with the existing display_type / section handling preserved. -->
+        <xpath expr="//tbody" position="replace">
+            <tbody>
+                <t t-foreach="o.order_line.filtered(lambda l: l.display_type or l.product_qty != 0)" t-as="order_line">
+                    <tr t-att-class="'fw-bolder o_line_section' if order_line.display_type == 'line_section' else 'fw-bold o_line_subsection' if order_line.display_type == 'line_subsection' else 'fst-italic o_line_note' if order_line.display_type == 'line_note' else ''">
+                        <t t-if="not order_line.display_type">
+                            <td id="product">
+                                <span t-field="order_line.name"/>
+                            </td>
+                            <td class="text-center">
+                                <span t-field="order_line.date_planned" t-options="{'date_only': 'true'}"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="order_line.product_qty"/>
+                                <span t-field="order_line.product_uom_id" groups="uom.group_uom"/>
+                                <span t-if="order_line.product_uom_id != order_line.product_id.uom_id" class="text-muted small">
+                                    <br/>
+                                    <span t-field="order_line.product_uom_qty" t-options="{'widget': 'float', 'decimal_precision': 'Product Unit'}"/>
+                                    <span t-field="order_line.product_id.uom_id"/>
+                                </span>
+                            </td>
+                            <td class="text-start">
+                                <span t-if="order_line.x_elks_account_id" t-field="order_line.x_elks_account_id"/>
+                            </td>
+                            <td class="text-end" t-att-class="'text-end text-danger fw-bold' if order_line.x_over_budget else 'text-end'">
+                                <t t-if="order_line.x_budget_line_id">
+                                    <span t-field="order_line.x_budget_available"
+                                        t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </t>
+                                <t t-else="">
+                                    <span class="text-muted">—</span>
+                                </t>
+                            </td>
+                        </t>
+                        <t t-else="">
+                            <td colspan="99" id="section">
+                                <span t-field="order_line.name"/>
+                            </td>
+                        </t>
+                    </tr>
+                </t>
+            </tbody>
         </xpath>
     </template>
 
