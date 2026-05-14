@@ -76,11 +76,10 @@ class PurchaseOrder(models.Model):
         currency_field='currency_id',
     )
 
-    # Maintenance link
-    x_maintenance_request_id = fields.Many2one(
-        "maintenance.request", string="Maintenance Request",
-        copy=False,
-    )
+    # Maintenance link (x_maintenance_request_id) and sync hook are
+    # provided by the ``elksmaintenance_purchase`` bridge module.
+    # Keeping them out of here lets elkspurchase install on databases
+    # without the ``maintenance`` / ``elksmaintenance`` modules.
 
     # Over-budget flag (any line over budget)
     x_has_over_budget_lines = fields.Boolean(
@@ -245,11 +244,17 @@ class PurchaseOrder(models.Model):
                        "Recorded by %s.", self.env.user.name),
                 subtype_xmlid='mail.mt_comment',
             )
-            # Sync maintenance request
-            if order.x_maintenance_request_id:
-                order._sync_maintenance_po_confirmed()
+        # Run post-approve hooks — bridge modules (e.g.
+        # elksmaintenance_purchase) override _elks_post_floor_approve_hooks
+        # to add their own side-effects without needing this module to
+        # know about them.
+        self._elks_post_floor_approve_hooks()
         # Auto-confirm as a real Odoo PO
         return super().button_confirm()
+
+    def _elks_post_floor_approve_hooks(self):
+        """Hook for bridge modules to plug in.  No-op base implementation."""
+        return
 
     def action_floor_reject(self):
         """Open rejection reason wizard for Floor rejection."""
@@ -371,22 +376,7 @@ class PurchaseOrder(models.Model):
 
         return result
 
-    # ------------------------------------------------------------------
-    # Maintenance sync
-    # ------------------------------------------------------------------
-    def _sync_maintenance_po_confirmed(self):
-        self.ensure_one()
-        mr = self.x_maintenance_request_id
-        if not mr:
-            return
-        if self.x_elks_account_id and not mr.x_elks_account_id:
-            mr.x_elks_account_id = self.x_elks_account_id.id
-        mr.message_post(
-            body=_(
-                "<b>Purchase Order Approved</b><br/>"
-                "PO: %(po_name)s — $%(amount)s",
-                po_name=self.name,
-                amount=f"{self.amount_total:,.2f}",
-            ),
-            subtype_xmlid='mail.mt_comment',
-        )
+    # Maintenance sync (_sync_maintenance_po_confirmed) lives in the
+    # ``elksmaintenance_purchase`` bridge module — invoked via
+    # ``_elks_post_floor_approve_hooks`` so this module doesn't have
+    # to know it exists.

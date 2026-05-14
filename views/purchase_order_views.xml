@@ -118,11 +118,9 @@
                         <field name="x_requesting_department_id"/>
                         <field name="x_requesting_committee_id"/>
                     </group>
-                    <group>
-                        <field name="x_maintenance_request_id"
-                               readonly="1"
-                               invisible="not x_maintenance_request_id"/>
-                    </group>
+                    <!-- Maintenance-request back-reference is injected
+                         here by the elksmaintenance_purchase bridge
+                         when both modules are installed. -->
                 </group>
             </xpath>
 

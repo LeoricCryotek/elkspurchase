@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Elks Lodge Purchase Requests",
-    "version": "19.0.2.0",
+    "version": "19.0.3.0",
     "category": "Elks Lodge/Purchase",
     "summary": "Requisition → Board → Floor → Purchase Order approval workflow",
     "description": """
@@ -15,9 +15,13 @@ Simple Elks Lodge purchase approval:
 """,
     "author": "Lewiston Elks Lodge #896",
     "license": "LGPL-3",
+    # elksmaintenance is intentionally NOT a dependency.  The maintenance
+    # ↔ purchase integration lives in the auto_install bridge module
+    # ``elksmaintenance_purchase``, which loads only when both halves
+    # are installed.  This keeps elkspurchase installable on an Odoo
+    # database that does not run the lodge maintenance ticket system.
     "depends": [
         "purchase",
-        "elksmaintenance",
         "elksfrs",
     ],
     "data": [
@@ -27,7 +31,6 @@ Simple Elks Lodge purchase approval:
         "wizard/reject_wizard_views.xml",
         "report/purchase_report_templates.xml",
         "views/purchase_order_views.xml",
-        "views/maintenance_request_views.xml",
     ],
     "assets": {
         "web.assets_backend": [
