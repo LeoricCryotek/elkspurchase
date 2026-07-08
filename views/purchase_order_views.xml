@@ -285,4 +285,62 @@
         </field>
     </record>
 
+    <!-- ============================================================
+         Requisition Lines — top-level list view for purchase.order.line
+
+         Gives every purchase.order.line a proper menu-driven list view.
+         Without this, purchase.order.line has no standalone action, so
+         you can't get to the ⚙ Actions → Import records UI without
+         hacking a URL together.  Handy for CSV imports of line items
+         attached to already-created POs.
+         ============================================================ -->
+    <record id="purchase_order_line_list_elks" model="ir.ui.view">
+        <field name="name">purchase.order.line.list.elks</field>
+        <field name="model">purchase.order.line</field>
+        <field name="arch" type="xml">
+            <list string="Requisition Lines" editable="bottom">
+                <field name="order_id"/>
+                <field name="name"/>
+                <field name="product_id" optional="show"/>
+                <field name="product_qty"/>
+                <field name="product_uom_id" optional="hide"
+                       groups="uom.group_uom"/>
+                <field name="price_unit"/>
+                <field name="x_elks_account_id" optional="show"
+                       domain="[('account_type', '=', 'expense')]"/>
+                <field name="x_budget_available" optional="show"/>
+                <field name="x_over_budget" optional="hide"/>
+                <field name="price_subtotal" sum="Total"/>
+                <field name="date_planned" optional="hide"/>
+                <field name="x_ordered" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_purchase_order_line_elks" model="ir.actions.act_window">
+        <field name="name">Requisition Lines</field>
+        <field name="res_model">purchase.order.line</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="purchase_order_line_list_elks"/>
+        <field name="context">{'search_default_group_order': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No requisition lines to display.
+            </p>
+            <p>
+                Use the ⚙ Actions menu → Import records to load lines
+                from a CSV. Line CSVs must reference each parent PO by
+                its External ID via the <b>order_id/id</b> column.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_purchase_order_line_elks"
+              name="Requisition Lines"
+              action="action_purchase_order_line_elks"
+              parent="purchase.menu_procurement_management"
+              sequence="15"
+              groups="purchase.group_purchase_manager"/>
+
 </odoo>
