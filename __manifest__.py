@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Elks Lodge Purchase Requests",
-    "version": "19.0.3.1",
+    "version": "19.0.3.4",
     "category": "Elks Lodge/Purchase",
     "summary": "Requisition → Board → Floor → Purchase Order approval workflow",
     "description": """
@@ -29,6 +29,7 @@ Simple Elks Lodge purchase approval:
         "security/ir.model.access.csv",
         "data/mail_template_data.xml",
         "wizard/reject_wizard_views.xml",
+        "wizard/reset_state_wizard_views.xml",
         "report/purchase_report_templates.xml",
         "views/purchase_order_views.xml",
     ],

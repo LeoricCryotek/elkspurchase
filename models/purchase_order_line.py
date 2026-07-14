@@ -16,8 +16,10 @@ class PurchaseOrderLine(models.Model):
 
     x_elks_account_id = fields.Many2one(
         "elks.account", string="GL Account",
-        domain="[('account_type', '=', 'expense')]",
-        help="FRS account this line item will be charged to.",
+        domain="[('account_type', 'in', ['expense', 'cogs', 'fixed_asset'])]",
+        help="FRS account this line item will be charged to. "
+             "Includes Expense, Cost of Goods Sold (bar/food purchases), "
+             "and Fixed Asset (capital purchases).",
     )
     x_budget_line_id = fields.Many2one(
         "elks.budget.line", string="Budget Line",

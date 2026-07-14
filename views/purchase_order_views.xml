@@ -135,7 +135,7 @@
             <!-- Add GL Account and budget columns before price_unit -->
             <xpath expr="//field[@name='order_line']//field[@name='price_unit']" position="before">
                 <field name="x_elks_account_id" optional="show"
-                       domain="[('account_type', '=', 'expense')]"/>
+                       domain="[('account_type', 'in', ['expense', 'cogs', 'fixed_asset'])]"/>
                 <field name="x_budget_available" optional="show"/>
                 <field name="x_over_budget" column_invisible="1"/>
             </xpath>
@@ -307,7 +307,7 @@
                        groups="uom.group_uom"/>
                 <field name="price_unit"/>
                 <field name="x_elks_account_id" optional="show"
-                       domain="[('account_type', '=', 'expense')]"/>
+                       domain="[('account_type', 'in', ['expense', 'cogs', 'fixed_asset'])]"/>
                 <field name="x_budget_available" optional="show"/>
                 <field name="x_over_budget" optional="hide"/>
                 <field name="price_subtotal" sum="Total"/>

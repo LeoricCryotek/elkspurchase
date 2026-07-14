@@ -60,7 +60,7 @@ class PurchaseOrder(models.Model):
     # GL account & budget
     x_elks_account_id = fields.Many2one(
         "elks.account", string="GL Account",
-        domain="[('account_type', 'in', ['expense', 'fixed_asset'])]",
+        domain="[('account_type', 'in', ['expense', 'cogs', 'fixed_asset'])]",
         tracking=True,
     )
     x_elks_department_id = fields.Many2one(
@@ -138,55 +138,71 @@ class PurchaseOrder(models.Model):
     # Budget transfer request
     # ------------------------------------------------------------------
     def action_request_budget_transfer(self):
-        """Create draft budget transfer requests for over-budget lines."""
+        """Open a Budget Transfer form pre-populated with the over-budget
+        line's destination + shortfall.
+
+        We can't ``.create()`` the elks.budget.transfer directly because the
+        model requires ``from_line_id`` — and only the Secretary can decide
+        which budget line to pull the money FROM. So we open a fresh form
+        with ``default_*`` context values and let them pick the source.
+
+        If there are multiple over-budget lines, we open the form for the
+        FIRST one and note the others in the log; user re-clicks the button
+        after saving to handle each remaining line.
+        """
         self.ensure_one()
         over_lines = self.order_line.filtered('x_over_budget')
         if not over_lines:
             raise UserError(_("No line items are over budget."))
 
-        transfers = self.env['elks.budget.transfer']
-        for line in over_lines:
-            shortfall = line.price_subtotal - line.x_budget_available
-            transfer = transfers.create({
-                'budget_id': line.x_budget_line_id.budget_id.id,
-                'to_line_id': line.x_budget_line_id.id,
-                'amount': shortfall,
-                'reason': _(
-                    "Budget transfer needed for requisition %(po)s.\n"
-                    "Line: %(product)s — $%(amount)s\n"
-                    "Available: $%(available)s | Shortfall: $%(shortfall)s",
-                    po=self.name,
-                    product=line.name,
-                    amount=f"{line.price_subtotal:,.2f}",
-                    available=f"{line.x_budget_available:,.2f}",
-                    shortfall=f"{shortfall:,.2f}",
-                ),
-            })
-            transfers |= transfer
+        # Pick the first over-budget line as the destination
+        line = over_lines[0]
+        shortfall = line.price_subtotal - line.x_budget_available
+
+        remaining = len(over_lines) - 1
+        note_extra = ""
+        if remaining:
+            note_extra = _(
+                "\n\n(%(n)s other over-budget line(s) still need transfers — "
+                "click Request Budget Transfer again after saving this one.)",
+                n=remaining,
+            )
+
+        default_reason = _(
+            "Budget transfer needed for requisition %(po)s.\n"
+            "Line: %(product)s — $%(amount)s\n"
+            "Available: $%(available)s | Shortfall: $%(shortfall)s%(extra)s",
+            po=self.name,
+            product=line.name,
+            amount=f"{line.price_subtotal:,.2f}",
+            available=f"{line.x_budget_available:,.2f}",
+            shortfall=f"{shortfall:,.2f}",
+            extra=note_extra,
+        )
 
         self.message_post(
             body=_(
-                "<b>Budget Transfer Request(s) Created</b><br/>"
-                "%(count)s transfer(s) pending Secretary approval.",
-                count=len(transfers),
+                "<b>Budget Transfer form opened</b><br/>"
+                "Line <i>%(product)s</i> is short $%(shortfall)s. "
+                "Select a source budget line and save to file the request.",
+                product=line.name,
+                shortfall=f"{shortfall:,.2f}",
             ),
             subtype_xmlid='mail.mt_comment',
         )
 
-        if len(transfers) == 1:
-            return {
-                'type': 'ir.actions.act_window',
-                'name': _("Budget Transfer"),
-                'res_model': 'elks.budget.transfer',
-                'res_id': transfers[0].id,
-                'view_mode': 'form',
-            }
         return {
             'type': 'ir.actions.act_window',
-            'name': _("Budget Transfers"),
+            'name': _("New Budget Transfer"),
             'res_model': 'elks.budget.transfer',
-            'domain': [('id', 'in', transfers.ids)],
-            'view_mode': 'list,form',
+            'view_mode': 'form',
+            'target': 'current',
+            'context': {
+                'default_budget_id': line.x_budget_line_id.budget_id.id,
+                'default_to_line_id': line.x_budget_line_id.id,
+                'default_amount': shortfall,
+                'default_reason': default_reason,
+            },
         }
 
     # ------------------------------------------------------------------

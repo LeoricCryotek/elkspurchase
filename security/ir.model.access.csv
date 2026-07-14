@@ -1,2 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_reject_wizard_all,elks.reject.requisition.wizard.all,model_elks_reject_requisition_wizard,base.group_user,1,1,1,1
+access_reset_state_wizard_manager,elks.reset.approval.state.wizard.manager,model_elks_reset_approval_state_wizard,purchase.group_purchase_manager,1,1,1,1

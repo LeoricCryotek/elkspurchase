@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================
+         Wizard form view
+         ============================================================ -->
+    <record id="view_reset_approval_state_wizard" model="ir.ui.view">
+        <field name="name">elks.reset.approval.state.wizard.form</field>
+        <field name="model">elks.reset.approval.state.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reset Requisition Approval State">
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Reversing an accidental approval click.</strong>
+                        This changes the requisition's approval state
+                        (<code>x_approval_state</code>) directly — bypassing
+                        the normal Submit / Approve / Reject buttons. The
+                        reason you enter below will be posted to the chatter
+                        so there's an audit trail.
+                    </div>
+
+                    <group>
+                        <field name="purchase_order_id" readonly="1"
+                               options="{'no_open': True}"/>
+                        <field name="current_state" readonly="1"/>
+                        <field name="target_state"/>
+                        <field name="reason" placeholder="Why is this being reset?"/>
+                    </group>
+
+                    <div class="alert alert-danger" role="alert"
+                         invisible="not approved_warning">
+                        <strong>Warning — leaving an Approved state.</strong>
+                        If any line items on this requisition were already
+                        marked Ordered, the journal entries posted at that
+                        time are <b>not</b> automatically reversed. Cancel
+                        those journal entries or run "Undo Ordered" on the
+                        lines first if you want to fully unwind.
+                    </div>
+
+                    <field name="approved_warning" invisible="1"/>
+                </sheet>
+                <footer>
+                    <button name="action_apply" type="object"
+                            string="Reset State" class="btn-primary"/>
+                    <button special="cancel" string="Cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Server action — appears in the ⚙ Actions menu on purchase.order
+         ============================================================ -->
+    <record id="action_reset_approval_state_wizard" model="ir.actions.act_window">
+        <field name="name">Reset Approval State…</field>
+        <field name="res_model">elks.reset.approval.state.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_view_types">form,list</field>
+        <field name="groups_id" eval="[(4, ref('purchase.group_purchase_manager'))]"/>
+    </record>
+
+</odoo>
