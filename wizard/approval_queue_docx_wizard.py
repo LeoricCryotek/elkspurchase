@@ -23,7 +23,6 @@ from odoo.exceptions import UserError
 try:
     from docx import Document
     from docx.shared import Pt, Inches, RGBColor
-    from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 except ImportError:
     Document = None  # module install guard; raise at runtime

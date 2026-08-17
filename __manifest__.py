@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Elks Lodge Purchase Requests",
-    "version": "19.0.3.6",
+    "version": "19.0.3.7",
     "category": "Elks Lodge/Purchase",
     "summary": "Requisition → Board → Floor → Purchase Order approval workflow",
     "description": """
@@ -36,7 +36,9 @@ Simple Elks Lodge purchase approval:
         "views/purchase_order_views.xml",
     ],
     "external_dependencies": {
-        "python": ["docx"],
+        # PyPI distribution name (what `pip install` uses), NOT the
+        # import name. Odoo checks via importlib.metadata.version().
+        "python": ["python-docx"],
     },
     "assets": {
         "web.assets_backend": [
