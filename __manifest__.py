@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Elks Lodge Purchase Requests",
-    "version": "19.0.3.4",
+    "version": "19.0.3.6",
     "category": "Elks Lodge/Purchase",
     "summary": "Requisition → Board → Floor → Purchase Order approval workflow",
     "description": """
@@ -30,9 +30,14 @@ Simple Elks Lodge purchase approval:
         "data/mail_template_data.xml",
         "wizard/reject_wizard_views.xml",
         "wizard/reset_state_wizard_views.xml",
+        "wizard/approval_queue_docx_wizard_views.xml",
         "report/purchase_report_templates.xml",
+        "report/approval_queue_reports.xml",
         "views/purchase_order_views.xml",
     ],
+    "external_dependencies": {
+        "python": ["docx"],
+    },
     "assets": {
         "web.assets_backend": [
             "elkspurchase/static/src/views/purchase_dashboard.xml",

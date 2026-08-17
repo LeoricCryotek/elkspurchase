@@ -109,6 +109,34 @@
 
                 <field name="x_approval_state" widget="statusbar"
                        statusbar_visible="draft,board,floor,approved"/>
+
+                <!-- Meeting-packet print buttons — always visible to
+                     purchase managers so the Secretary can pull the
+                     Board or Floor queue report from any requisition
+                     screen. Both actions render across ALL POs in the
+                     given state, not just the one currently open. -->
+                <button name="%(server_action_print_board_queue)d"
+                        string="Print Board Queue"
+                        type="action"
+                        class="btn-secondary"
+                        groups="purchase.group_purchase_manager"/>
+                <button name="%(server_action_print_floor_queue)d"
+                        string="Print Floor Queue"
+                        type="action"
+                        class="btn-secondary"
+                        groups="purchase.group_purchase_manager"/>
+
+                <!-- Word (.docx) variants — for pasting into meeting minutes -->
+                <button name="%(server_action_docx_board)d"
+                        string="Board Queue (Word)"
+                        type="action"
+                        class="btn-secondary"
+                        groups="purchase.group_purchase_manager"/>
+                <button name="%(server_action_docx_floor)d"
+                        string="Floor Queue (Word)"
+                        type="action"
+                        class="btn-secondary"
+                        groups="purchase.group_purchase_manager"/>
             </xpath>
 
             <!-- Requesting info above the line items -->
