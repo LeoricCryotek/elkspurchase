@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Generate a Word (.docx) report of the Board or Floor approval queue,
-for the Secretary to paste directly into meeting minutes.
+"""Generate a Word (.docx) or Excel (.xlsx) report of the Board or Floor
+approval queue, for the Secretary to paste into meeting minutes or share
+as a spreadsheet the Board can sort/filter.
 
-Layout kept minimal and copy-paste-friendly:
-  - Title line
-  - One-line date + counts
-  - Motion header
-  - Numbered list of requisitions (PO # · Vendor · Purpose · $Amount)
-  - Grand total
-  - Vote-recording line
+Word layout — copy-paste-friendly for minutes:
+  - Title line, date + counts, motion header
+  - Numbered list of requisitions
+  - Grand total, vote-recording block
 
-Each queue produces a distinct file named e.g.
-"Board Approval Queue - 2026-08-16.docx".
+Excel layout — one row per requisition with an editable Vote column
+  - Filter/sort by dept, amount, etc.
+  - Vote column ready for tally marks
+
+Files named e.g. "Board Approval Queue - 2026-08-16.docx" / ".xlsx".
 """
 import base64
 import io
@@ -27,6 +28,12 @@ try:
 except ImportError:
     Document = None  # module install guard; raise at runtime
 
+# openpyxl is a hard dependency of Odoo (used by base import/export)
+# so we don't need a manifest external_dependencies entry for it.
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+
 
 QUEUE_TYPES = [
     ('board', 'Board Approval Queue'),
@@ -36,21 +43,24 @@ QUEUE_TYPES = [
 
 class ApprovalQueueDocxWizard(models.TransientModel):
     _name = "elks.approval.queue.docx.wizard"
-    _description = "Approval Queue — Word Document Export"
+    _description = "Approval Queue — Word / Excel Export"
 
     queue_type = fields.Selection(
         QUEUE_TYPES, string="Queue", required=True, default='board',
     )
+    output_format = fields.Selection([
+        ('docx', 'Word (.docx)'),
+        ('xlsx', 'Excel (.xlsx)'),
+    ], string="Format", required=True, default='docx')
 
-    def action_generate_docx(self):
-        """Build the .docx, save as ir.attachment, return download URL."""
+    def action_generate(self):
+        """Dispatcher — Word or Excel based on output_format."""
         self.ensure_one()
-        if Document is None:
-            raise UserError(_(
-                "python-docx is not installed on the server. "
-                "Ask your admin to run `pip install python-docx`."
-            ))
+        if self.output_format == 'xlsx':
+            return self.action_generate_xlsx()
+        return self.action_generate_docx()
 
+    def _get_queue_pos(self):
         pos = self.env['purchase.order'].search(
             [('x_approval_state', '=', self.queue_type)],
             order='x_requesting_department_id, name',
@@ -60,34 +70,61 @@ class ApprovalQueueDocxWizard(models.TransientModel):
                 "No requisitions are currently in the %s queue.",
                 dict(QUEUE_TYPES)[self.queue_type],
             ))
+        return pos
 
-        doc = self._build_docx(pos)
-
-        # Serialize to bytes
-        buf = io.BytesIO()
-        doc.save(buf)
-        data = buf.getvalue()
-
-        # Save as attachment for download
+    def _save_and_download(self, data: bytes, ext: str, mimetype: str):
         today_str = date.today().strftime("%Y-%m-%d")
         queue_label = dict(QUEUE_TYPES)[self.queue_type]
-        fname = f"{queue_label} - {today_str}.docx"
+        fname = f"{queue_label} - {today_str}.{ext}"
         att = self.env['ir.attachment'].create({
             'name': fname,
             'datas': base64.b64encode(data),
             'res_model': self._name,
             'res_id': self.id,
-            'mimetype': (
-                'application/vnd.openxmlformats-officedocument.'
-                'wordprocessingml.document'
-            ),
+            'mimetype': mimetype,
         })
-
         return {
             'type': 'ir.actions.act_url',
             'url': f'/web/content/{att.id}?download=true',
             'target': 'self',
         }
+
+    def action_generate_docx(self):
+        """Build the .docx, save as ir.attachment, return download URL."""
+        self.ensure_one()
+        if Document is None:
+            raise UserError(_(
+                "python-docx is not installed on the server. "
+                "Ask your admin to run `pip install python-docx`."
+            ))
+        pos = self._get_queue_pos()
+        doc = self._build_docx(pos)
+        buf = io.BytesIO()
+        doc.save(buf)
+        return self._save_and_download(
+            buf.getvalue(),
+            ext="docx",
+            mimetype=(
+                'application/vnd.openxmlformats-officedocument.'
+                'wordprocessingml.document'
+            ),
+        )
+
+    def action_generate_xlsx(self):
+        """Build an .xlsx workbook of the queue and download it."""
+        self.ensure_one()
+        pos = self._get_queue_pos()
+        wb = self._build_xlsx(pos)
+        buf = io.BytesIO()
+        wb.save(buf)
+        return self._save_and_download(
+            buf.getvalue(),
+            ext="xlsx",
+            mimetype=(
+                'application/vnd.openxmlformats-officedocument.'
+                'spreadsheetml.sheet'
+            ),
+        )
 
     # ------------------------------------------------------------------
     # DOCX layout
@@ -202,3 +239,133 @@ class ApprovalQueueDocxWizard(models.TransientModel):
         sig_run.font.size = Pt(10)
 
         return doc
+
+    # ------------------------------------------------------------------
+    # XLSX layout — meeting worksheet the Board can sort/filter/tally in
+    # ------------------------------------------------------------------
+    def _build_xlsx(self, pos):
+        queue_label = dict(QUEUE_TYPES)[self.queue_type]
+        stage = "Board" if self.queue_type == 'board' else "Floor"
+        subtotal = sum(p.amount_total for p in pos)
+        over_budget = len(pos.filtered('x_has_over_budget_lines'))
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"{stage} Queue"
+
+        # ── Styles ──────────────────────────────────────────
+        title_font  = Font(name="Calibri", bold=True, size=16, color="FFFFFF")
+        title_fill  = PatternFill("solid", start_color="2C3E50")
+        sub_font    = Font(name="Calibri", italic=True, size=10, color="555555")
+        hdr_font    = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
+        hdr_fill    = PatternFill("solid", start_color="2C3E50")
+        hdr_align   = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        body_font   = Font(name="Calibri", size=11)
+        total_font  = Font(name="Calibri", bold=True, size=12)
+        red_font    = Font(name="Calibri", bold=True, size=11, color="C00000")
+        red_fill    = PatternFill("solid", start_color="FFF2F2")
+        thin        = Side(style="thin", color="CCCCCC")
+        box         = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        # ── Row 1: Title (merged) ──────────────────────────
+        ws.merge_cells("A1:F1")
+        c = ws["A1"]
+        c.value = queue_label
+        c.font = title_font
+        c.fill = title_fill
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[1].height = 30
+
+        # ── Row 2: Date + counts ───────────────────────────
+        ws.merge_cells("A2:F2")
+        c = ws["A2"]
+        c.value = (
+            f"Prepared {date.today().strftime('%B %d, %Y')}   ·   "
+            f"{len(pos)} requisition(s)   ·   Total: ${subtotal:,.2f}"
+            + (f"   ·   ⚠ {over_budget} over budget" if over_budget else "")
+        )
+        c.font = sub_font
+        c.alignment = Alignment(horizontal="center")
+
+        # ── Row 4: Column headers ──────────────────────────
+        headers = ["PO #", "Requisition Title", "Vendor",
+                   "Dept / Committee", "Amount", "Vote (Y/N/Abs)"]
+        for col_idx, h in enumerate(headers, start=1):
+            cell = ws.cell(row=4, column=col_idx, value=h)
+            cell.font = hdr_font
+            cell.fill = hdr_fill
+            cell.alignment = hdr_align
+            cell.border = box
+
+        # ── Data rows ──────────────────────────────────────
+        row = 5
+        for po in pos:
+            over = po.x_has_over_budget_lines
+            row_font = red_font if over else body_font
+            row_fill = red_fill if over else None
+
+            values = [
+                po.name,
+                (po.x_requisition_title or "Untitled")
+                    + (" ⚠ OVER BUDGET" if over else ""),
+                po.partner_id.display_name or "—",
+                (po.x_requesting_department_id.display_name or "")
+                + (f"\n{po.x_requesting_committee_id.display_name}"
+                   if po.x_requesting_committee_id else ""),
+                po.amount_total,
+                "",  # Vote — Secretary fills in
+            ]
+            for col_idx, val in enumerate(values, start=1):
+                cell = ws.cell(row=row, column=col_idx, value=val)
+                cell.font = row_font
+                cell.border = box
+                cell.alignment = Alignment(
+                    wrap_text=True, vertical="top",
+                    horizontal="right" if col_idx == 5 else "left",
+                )
+                if col_idx == 5:
+                    cell.number_format = "$#,##0.00"
+                if row_fill:
+                    cell.fill = row_fill
+            row += 1
+
+        # ── Grand total row ────────────────────────────────
+        total_row = row + 1
+        ws.cell(row=total_row, column=4, value="GRAND TOTAL").font = total_font
+        ws.cell(row=total_row, column=4).alignment = Alignment(horizontal="right")
+        gt = ws.cell(row=total_row, column=5, value=f"=SUM(E5:E{row-1})")
+        gt.font = total_font
+        gt.number_format = "$#,##0.00"
+        gt.border = box
+
+        # ── Vote tally section ─────────────────────────────
+        row = total_row + 3
+        ws.cell(row=row, column=1, value="Motion by:").font = total_font
+        ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=3)
+        ws.cell(row=row, column=4, value="Second by:").font = total_font
+        ws.merge_cells(start_row=row, start_column=5, end_row=row, end_column=6)
+        row += 2
+        ws.cell(row=row, column=1, value="Vote tally:").font = total_font
+        ws.cell(row=row, column=2, value="YES:")
+        ws.cell(row=row, column=3, value="NO:")
+        ws.cell(row=row, column=4, value="ABSTAIN:")
+        ws.cell(row=row, column=5, value="Motion:")
+        ws.cell(row=row, column=6, value="☐ Carried  ☐ Failed")
+        row += 2
+        ws.cell(row=row, column=1,
+                value=f"{stage} Chair Signature:").font = total_font
+        ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=4)
+        ws.cell(row=row, column=5, value="Date:").font = total_font
+
+        # ── Column widths ──────────────────────────────────
+        widths = [12, 42, 30, 28, 14, 22]
+        for i, w in enumerate(widths, start=1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+        # Freeze the header row so Board can scroll long queues
+        ws.freeze_panes = "A5"
+
+        # Auto-filter on the header row for easy sort by dept, amount, etc.
+        ws.auto_filter.ref = f"A4:F{total_row - 2}"
+
+        return wb

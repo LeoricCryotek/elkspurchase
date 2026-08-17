@@ -137,6 +137,18 @@
                         type="action"
                         class="btn-secondary"
                         groups="purchase.group_purchase_manager"/>
+
+                <!-- Excel (.xlsx) variants — for sort/filter/vote-tally -->
+                <button name="%(server_action_xlsx_board)d"
+                        string="Board Queue (Excel)"
+                        type="action"
+                        class="btn-secondary"
+                        groups="purchase.group_purchase_manager"/>
+                <button name="%(server_action_xlsx_floor)d"
+                        string="Floor Queue (Excel)"
+                        type="action"
+                        class="btn-secondary"
+                        groups="purchase.group_purchase_manager"/>
             </xpath>
 
             <!-- Requesting info above the line items -->

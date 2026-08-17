@@ -8,20 +8,22 @@
         <field name="name">elks.approval.queue.docx.wizard.form</field>
         <field name="model">elks.approval.queue.docx.wizard</field>
         <field name="arch" type="xml">
-            <form string="Approval Queue — Word Export">
+            <form string="Approval Queue Export">
                 <sheet>
                     <div class="alert alert-info" role="alert">
-                        Generates a Microsoft Word (.docx) file of every
-                        requisition currently in the selected queue.
-                        Formatted for copy/paste into meeting minutes.
+                        Generates a file listing every requisition currently
+                        in the selected queue. Word (.docx) is best for
+                        pasting into meeting minutes; Excel (.xlsx) is best
+                        for Board members to sort/filter or tally votes.
                     </div>
                     <group>
                         <field name="queue_type" widget="radio"/>
+                        <field name="output_format" widget="radio"/>
                     </group>
                 </sheet>
                 <footer>
-                    <button name="action_generate_docx" type="object"
-                            string="Download Word Document"
+                    <button name="action_generate" type="object"
+                            string="Download File"
                             class="btn-primary"/>
                     <button special="cancel" string="Cancel"
                             class="btn-secondary"/>
@@ -54,6 +56,27 @@ action = wiz.action_generate_docx()
 ]]></field>
     </record>
 
+    <!-- Excel (.xlsx) variants — same one-click UX -->
+    <record id="server_action_xlsx_board" model="ir.actions.server">
+        <field name="name">Board Approval Queue (Excel)</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+wiz = env['elks.approval.queue.docx.wizard'].create({'queue_type': 'board'})
+action = wiz.action_generate_xlsx()
+]]></field>
+    </record>
+
+    <record id="server_action_xlsx_floor" model="ir.actions.server">
+        <field name="name">Floor Approval Queue (Excel)</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+wiz = env['elks.approval.queue.docx.wizard'].create({'queue_type': 'floor'})
+action = wiz.action_generate_xlsx()
+]]></field>
+    </record>
+
     <!-- ============================================================
          Menu items under Purchase → Reporting
          Sit right next to the existing PDF queue reports.
@@ -70,6 +93,20 @@ action = wiz.action_generate_docx()
               parent="purchase.purchase_report_main"
               action="server_action_docx_floor"
               sequence="87"
+              groups="purchase.group_purchase_manager"/>
+
+    <menuitem id="menu_report_board_queue_xlsx"
+              name="Board Approval Queue (Excel)"
+              parent="purchase.purchase_report_main"
+              action="server_action_xlsx_board"
+              sequence="83"
+              groups="purchase.group_purchase_manager"/>
+
+    <menuitem id="menu_report_floor_queue_xlsx"
+              name="Floor Approval Queue (Excel)"
+              parent="purchase.purchase_report_main"
+              action="server_action_xlsx_floor"
+              sequence="88"
               groups="purchase.group_purchase_manager"/>
 
 </odoo>
