@@ -87,8 +87,60 @@ class PurchaseOrder(models.Model):
     )
 
     # ------------------------------------------------------------------
+    # Officer sign-off (post Floor-approval workflow)
+    # After a PO reaches x_approval_state='approved', it needs three
+    # officer signatures before payment is issued: ER, Treasurer, Secretary.
+    # Each row records the signature image, who signed, and when.
+    # ------------------------------------------------------------------
+    x_er_signature = fields.Binary(
+        "ER Signature", copy=False,
+        help="Exalted Ruler sign-off. Draw signature or click "
+             "'Sign as ER' to stamp with the current user's saved signature.",
+    )
+    x_er_signed_by_id = fields.Many2one(
+        "res.users", string="ER Signed By", copy=False, readonly=True,
+    )
+    x_er_signed_date = fields.Datetime(
+        "ER Signed Date", copy=False, readonly=True,
+    )
+
+    x_treasurer_signature = fields.Binary(
+        "Treasurer Signature", copy=False,
+    )
+    x_treasurer_signed_by_id = fields.Many2one(
+        "res.users", string="Treasurer Signed By", copy=False, readonly=True,
+    )
+    x_treasurer_signed_date = fields.Datetime(
+        "Treasurer Signed Date", copy=False, readonly=True,
+    )
+
+    x_secretary_signature = fields.Binary(
+        "Secretary Signature", copy=False,
+    )
+    x_secretary_signed_by_id = fields.Many2one(
+        "res.users", string="Secretary Signed By", copy=False, readonly=True,
+    )
+    x_secretary_signed_date = fields.Datetime(
+        "Secretary Signed Date", copy=False, readonly=True,
+    )
+
+    x_all_officers_signed = fields.Boolean(
+        "All Officers Signed",
+        compute="_compute_all_officers_signed", store=True,
+    )
+
+    # ------------------------------------------------------------------
     # Computed
     # ------------------------------------------------------------------
+    @api.depends("x_er_signature", "x_treasurer_signature", "x_secretary_signature")
+    def _compute_all_officers_signed(self):
+        for rec in self:
+            rec.x_all_officers_signed = bool(
+                rec.x_er_signature
+                and rec.x_treasurer_signature
+                and rec.x_secretary_signature
+            )
+
     @api.depends("x_budget_line_id", "x_budget_line_id.amount",
                  "x_budget_line_id.actual_amount", "amount_total")
     def _compute_budget_remaining(self):
@@ -324,6 +376,97 @@ class PurchaseOrder(models.Model):
                     dict(ELKS_STATES).get(order.x_approval_state, '?'),
                 ))
         return super().button_confirm()
+
+    # ------------------------------------------------------------------
+    # Officer sign-off actions — stamp the current user's saved
+    # signature onto the PO. Each is guarded by the appropriate group
+    # via the button's `groups=` attribute in the view, plus a runtime
+    # check here (defense in depth against direct RPC calls).
+    # ------------------------------------------------------------------
+    def _sign_as(self, role):
+        """Common helper — stamp signature, user, and timestamp.
+
+        `role` is one of 'er', 'treasurer', 'secretary'. Uses the
+        current user's saved signature (res.users.sign_signature) if
+        available; otherwise stores a text stamp with the user's name.
+        Post-condition: <x_role_signature>, <x_role_signed_by_id>, and
+        <x_role_signed_date> are populated and a chatter note is logged.
+        """
+        self.ensure_one()
+        if self.x_approval_state != 'approved':
+            raise UserError(_(
+                "Officer sign-off is only available on requisitions in "
+                "the Approved state (after Floor approval)."
+            ))
+        role_labels = {
+            'er': 'Exalted Ruler',
+            'treasurer': 'Treasurer',
+            'secretary': 'Secretary',
+        }
+        role_groups = {
+            'er':        'elkspurchase.group_elks_er',
+            'treasurer': 'elkspurchase.group_elks_treasurer',
+            'secretary': 'elkspurchase.group_elks_secretary',
+        }
+        if not self.env.user.has_group(role_groups[role]):
+            raise UserError(_(
+                "You are not authorized to sign as %s. Only members of "
+                "the %s group can place this signature.",
+                role_labels[role], role_labels[role],
+            ))
+        sig_field = f'x_{role}_signature'
+        user_field = f'x_{role}_signed_by_id'
+        date_field = f'x_{role}_signed_date'
+        if getattr(self, sig_field):
+            raise UserError(_(
+                "%s signature is already on this PO. To re-sign, an "
+                "admin must first clear the existing signature.",
+                role_labels[role],
+            ))
+        # Prefer the user's saved signature; fall back to a name stamp
+        # (rendered as a small SVG so the report can still display something).
+        saved_sig = self.env.user.sign_signature if hasattr(self.env.user, 'sign_signature') else None
+        signature_value = saved_sig or self._name_stamp_svg(self.env.user.name)
+        self.write({
+            sig_field: signature_value,
+            user_field: self.env.user.id,
+            date_field: fields.Datetime.now(),
+        })
+        self.message_post(
+            body=_(
+                "<b>%(role)s Signed</b> by %(user)s at %(when)s",
+                role=role_labels[role],
+                user=self.env.user.name,
+                when=fields.Datetime.context_timestamp(
+                    self, fields.Datetime.now()).strftime('%Y-%m-%d %I:%M %p'),
+            ),
+            subtype_xmlid='mail.mt_comment',
+        )
+        return True
+
+    def action_sign_as_er(self):
+        return self._sign_as('er')
+
+    def action_sign_as_treasurer(self):
+        return self._sign_as('treasurer')
+
+    def action_sign_as_secretary(self):
+        return self._sign_as('secretary')
+
+    @staticmethod
+    def _name_stamp_svg(name):
+        """Return a base64-encoded SVG that just prints the signer's name
+        in a stylized font. Used when the user has no saved signature
+        on file."""
+        import base64
+        svg = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="60" '
+            f'viewBox="0 0 300 60">'
+            f'<text x="10" y="40" font-family="Brush Script MT, cursive" '
+            f'font-size="32" fill="#1a1a1a">{name}</text>'
+            f'</svg>'
+        )
+        return base64.b64encode(svg.encode('utf-8'))
 
     # ------------------------------------------------------------------
     # Mark all lines as ordered

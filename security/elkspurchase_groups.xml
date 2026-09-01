@@ -36,9 +36,31 @@
             <field name="sequence">10</field>
             <field name="comment">
                 Can record Floor Vote results on purchase requests.
-                Typically the Lodge Secretary.
+                Typically the Lodge Secretary. Also authorized to
+                place the Secretary sign-off on approved POs.
             </field>
             <field name="implied_ids" eval="[(4, ref('group_elks_trustee'))]"/>
+        </record>
+
+        <!-- ── Officer sign-off groups — assigned to one user each ── -->
+        <record id="group_elks_treasurer" model="res.groups">
+            <field name="name">Treasurer (Officer Sign-Off)</field>
+            <field name="privilege_id" ref="res_groups_privilege_elkspurchase"/>
+            <field name="sequence">15</field>
+            <field name="comment">
+                Can place the Treasurer signature on an approved PO.
+                Assign to the Lodge Treasurer only.
+            </field>
+        </record>
+
+        <record id="group_elks_er" model="res.groups">
+            <field name="name">Exalted Ruler (Officer Sign-Off)</field>
+            <field name="privilege_id" ref="res_groups_privilege_elkspurchase"/>
+            <field name="sequence">20</field>
+            <field name="comment">
+                Can place the Exalted Ruler signature on an approved PO.
+                Assign to the sitting ER only.
+            </field>
         </record>
 
     </data>

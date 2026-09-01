@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Elks Lodge Purchase Requests",
-    "version": "19.0.3.11",
+    "version": "19.0.3.12",
     "category": "Elks Lodge/Purchase",
     "summary": "Requisition → Board → Floor → Purchase Order approval workflow",
     "description": """

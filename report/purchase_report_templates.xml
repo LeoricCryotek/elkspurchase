@@ -115,6 +115,78 @@
             </tbody>
         </xpath>
 
+        <!-- ================================================
+             Officer Sign-Off block on the printed PO — only shows
+             when the requisition is in the Approved state.
+             ================================================ -->
+        <xpath expr="//p[@t-field='o.note']" position="after">
+            <t t-if="o.x_approval_state == 'approved'">
+                <div style="margin-top:16px; border-top:2px solid #333; padding-top:8px; page-break-inside:avoid;">
+                    <div style="font-weight:bold; font-size:12px; margin-bottom:6px;">
+                        Officer Sign-Off
+                    </div>
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <td style="width:33%; vertical-align:top; padding:4px; border:1px solid #ccc;">
+                                <div style="font-size:10px; color:#555;">Exalted Ruler</div>
+                                <t t-if="o.x_er_signature">
+                                    <img t-att-src="image_data_uri(o.x_er_signature)"
+                                         style="max-height:50px; max-width:100%;"
+                                         alt="ER Signature"/>
+                                    <div style="font-size:9px; color:#555;">
+                                        <span t-field="o.x_er_signed_by_id"/>
+                                        <br/>
+                                        <span t-field="o.x_er_signed_date"
+                                              t-options="{'date_only': True}"/>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="height:50px; border-bottom:1px solid #999;"/>
+                                    <div style="font-size:9px; color:#999;">Pending</div>
+                                </t>
+                            </td>
+                            <td style="width:33%; vertical-align:top; padding:4px; border:1px solid #ccc;">
+                                <div style="font-size:10px; color:#555;">Treasurer</div>
+                                <t t-if="o.x_treasurer_signature">
+                                    <img t-att-src="image_data_uri(o.x_treasurer_signature)"
+                                         style="max-height:50px; max-width:100%;"
+                                         alt="Treasurer Signature"/>
+                                    <div style="font-size:9px; color:#555;">
+                                        <span t-field="o.x_treasurer_signed_by_id"/>
+                                        <br/>
+                                        <span t-field="o.x_treasurer_signed_date"
+                                              t-options="{'date_only': True}"/>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="height:50px; border-bottom:1px solid #999;"/>
+                                    <div style="font-size:9px; color:#999;">Pending</div>
+                                </t>
+                            </td>
+                            <td style="width:33%; vertical-align:top; padding:4px; border:1px solid #ccc;">
+                                <div style="font-size:10px; color:#555;">Secretary</div>
+                                <t t-if="o.x_secretary_signature">
+                                    <img t-att-src="image_data_uri(o.x_secretary_signature)"
+                                         style="max-height:50px; max-width:100%;"
+                                         alt="Secretary Signature"/>
+                                    <div style="font-size:9px; color:#555;">
+                                        <span t-field="o.x_secretary_signed_by_id"/>
+                                        <br/>
+                                        <span t-field="o.x_secretary_signed_date"
+                                              t-options="{'date_only': True}"/>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="height:50px; border-bottom:1px solid #999;"/>
+                                    <div style="font-size:9px; color:#999;">Pending</div>
+                                </t>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </t>
+        </xpath>
+
     </template>
 
     <!-- ============================================================

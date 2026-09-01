@@ -164,6 +164,62 @@
                 </group>
             </xpath>
 
+            <!-- ================================================
+                 Officer Sign-Off block — shown after Floor Approval
+                 (x_approval_state == 'approved'). Three columns for
+                 ER, Treasurer, Secretary. Each shows the signature
+                 image if signed, or a Sign button if not (and the
+                 current user has the right role).
+                 ================================================ -->
+            <xpath expr="//notebook" position="after">
+                <group string="Officer Sign-Off"
+                       invisible="x_approval_state != 'approved'">
+                    <group name="er_sign" string="Exalted Ruler">
+                        <field name="x_er_signature" widget="signature"
+                               nolabel="1"
+                               readonly="x_er_signature"/>
+                        <field name="x_er_signed_by_id"
+                               invisible="not x_er_signed_by_id"/>
+                        <field name="x_er_signed_date"
+                               invisible="not x_er_signed_date"/>
+                        <button name="action_sign_as_er"
+                                string="Sign as ER"
+                                type="object" class="btn-primary"
+                                groups="elkspurchase.group_elks_er"
+                                invisible="x_er_signature"/>
+                    </group>
+                    <group name="treasurer_sign" string="Treasurer">
+                        <field name="x_treasurer_signature" widget="signature"
+                               nolabel="1"
+                               readonly="x_treasurer_signature"/>
+                        <field name="x_treasurer_signed_by_id"
+                               invisible="not x_treasurer_signed_by_id"/>
+                        <field name="x_treasurer_signed_date"
+                               invisible="not x_treasurer_signed_date"/>
+                        <button name="action_sign_as_treasurer"
+                                string="Sign as Treasurer"
+                                type="object" class="btn-primary"
+                                groups="elkspurchase.group_elks_treasurer"
+                                invisible="x_treasurer_signature"/>
+                    </group>
+                    <group name="secretary_sign" string="Secretary">
+                        <field name="x_secretary_signature" widget="signature"
+                               nolabel="1"
+                               readonly="x_secretary_signature"/>
+                        <field name="x_secretary_signed_by_id"
+                               invisible="not x_secretary_signed_by_id"/>
+                        <field name="x_secretary_signed_date"
+                               invisible="not x_secretary_signed_date"/>
+                        <button name="action_sign_as_secretary"
+                                string="Sign as Secretary"
+                                type="object" class="btn-primary"
+                                groups="elkspurchase.group_elks_secretary"
+                                invisible="x_secretary_signature"/>
+                    </group>
+                </group>
+                <field name="x_all_officers_signed" invisible="1"/>
+            </xpath>
+
             <!-- Hide Taxes column on order lines, add GL Account -->
             <xpath expr="//field[@name='order_line']//field[@name='tax_ids']" position="attributes">
                 <attribute name="column_invisible">1</attribute>
