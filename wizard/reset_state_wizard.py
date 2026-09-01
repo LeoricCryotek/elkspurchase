@@ -64,7 +64,13 @@ class ResetApprovalStateWizard(models.TransientModel):
             )
 
     def action_apply(self):
-        """Reset the requisition's approval state and log the change."""
+        """Reset the requisition's approval state and log the change.
+
+        Also syncs the base ``purchase.order.state`` field so downstream
+        readonly rules (e.g. partner_id locked when state='purchase') release
+        properly.  Without this, resetting only x_approval_state leaves the
+        Vendor field greyed-out and unusable.
+        """
         self.ensure_one()
         po = self.purchase_order_id
         if self.target_state == po.x_approval_state:
@@ -75,15 +81,38 @@ class ResetApprovalStateWizard(models.TransientModel):
 
         old_label = dict(APPROVAL_STATES).get(po.x_approval_state, po.x_approval_state)
         new_label = dict(APPROVAL_STATES).get(self.target_state, self.target_state)
+        old_base_state = po.state
 
-        po.x_approval_state = self.target_state
+        # Sync the base state so form-field readonly rules relax properly.
+        # 'draft'/'board'/'floor'/'rejected' → base state 'draft' (fully editable)
+        # 'approved' → base state 'purchase' (matches standard Odoo purchase-approved)
+        base_state_map = {
+            'draft':    'draft',
+            'board':    'draft',
+            'floor':    'draft',
+            'rejected': 'draft',
+            'approved': 'purchase',
+        }
+        new_base_state = base_state_map.get(self.target_state, 'draft')
+
+        # sudo() so this works even when the current user's ACL is more
+        # restrictive on purchase.order.state transitions.
+        po.sudo().write({
+            'x_approval_state': self.target_state,
+            'state': new_base_state,
+        })
+
         po.message_post(
             body=_(
                 "<b>⚠️ Approval state manually reset</b><br/>"
                 "%(old)s → %(new)s by %(user)s<br/>"
+                "(base state: %(old_bs)s → %(new_bs)s — Vendor and line "
+                "edits are now unlocked.)<br/>"
                 "<b>Reason:</b> %(reason)s",
                 old=old_label,
                 new=new_label,
+                old_bs=old_base_state,
+                new_bs=new_base_state,
                 user=self.env.user.name,
                 reason=self.reason,
             ),

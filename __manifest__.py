@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Elks Lodge Purchase Requests",
-    "version": "19.0.3.8",
+    "version": "19.0.3.10",
     "category": "Elks Lodge/Purchase",
     "summary": "Requisition → Board → Floor → Purchase Order approval workflow",
     "description": """
@@ -34,6 +34,7 @@ Simple Elks Lodge purchase approval:
         "report/purchase_report_templates.xml",
         "report/approval_queue_reports.xml",
         "views/purchase_order_views.xml",
+        "views/bulk_approval_actions.xml",
     ],
     "external_dependencies": {
         # PyPI distribution name (what `pip install` uses), NOT the

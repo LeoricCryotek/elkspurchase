@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================
+         Bulk approval server actions — appear in the ⚙ Actions menu
+         on the Requisitions list view. Multi-select records, then
+         click the action to advance all selected records in one shot.
+         Each action skips records that are not in the expected state
+         and reports back how many were moved / skipped.
+         ============================================================ -->
+
+    <!-- ── Bulk Submit to Board (draft → board) ───────────────────── -->
+    <record id="server_action_bulk_submit_board" model="ir.actions.server">
+        <field name="name">Submit Selected to Board</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="groups_id" eval="[(4, ref('purchase.group_purchase_user'))]"/>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+moved, skipped = 0, 0
+for po in records:
+    if po.x_approval_state == 'draft':
+        po.action_submit()
+        moved += 1
+    else:
+        skipped += 1
+action = {
+    'type': 'ir.actions.client', 'tag': 'display_notification',
+    'params': {
+        'title': 'Submit to Board — complete',
+        'message': f'{moved} requisition(s) submitted to Board queue. {skipped} skipped (not in Draft state).',
+        'type': 'success' if moved else 'warning',
+        'sticky': False,
+    },
+}
+]]></field>
+    </record>
+
+    <!-- ── Bulk Board Approve (board → floor) ─────────────────────── -->
+    <record id="server_action_bulk_board_approve" model="ir.actions.server">
+        <field name="name">Board Approve Selected</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="groups_id" eval="[(4, ref('purchase.group_purchase_manager'))]"/>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+moved, skipped = 0, 0
+for po in records:
+    if po.x_approval_state == 'board':
+        po.action_board_approve()
+        moved += 1
+    else:
+        skipped += 1
+action = {
+    'type': 'ir.actions.client', 'tag': 'display_notification',
+    'params': {
+        'title': 'Board Approve — complete',
+        'message': f'{moved} requisition(s) advanced to Floor queue. {skipped} skipped (not in Board state).',
+        'type': 'success' if moved else 'warning',
+        'sticky': False,
+    },
+}
+]]></field>
+    </record>
+
+    <!-- ── Bulk Floor Approve (floor → approved) ──────────────────── -->
+    <record id="server_action_bulk_floor_approve" model="ir.actions.server">
+        <field name="name">Floor Approve Selected</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="groups_id" eval="[(4, ref('purchase.group_purchase_manager'))]"/>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+moved, skipped = 0, 0
+for po in records:
+    if po.x_approval_state == 'floor':
+        po.action_floor_approve()
+        moved += 1
+    else:
+        skipped += 1
+action = {
+    'type': 'ir.actions.client', 'tag': 'display_notification',
+    'params': {
+        'title': 'Floor Approve — complete',
+        'message': f'{moved} requisition(s) approved. {skipped} skipped (not in Floor state).',
+        'type': 'success' if moved else 'warning',
+        'sticky': False,
+    },
+}
+]]></field>
+    </record>
+
+</odoo>
