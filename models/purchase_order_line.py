@@ -123,6 +123,9 @@ class PurchaseOrderLine(models.Model):
         Can be called on multiple lines at once (e.g. from list view
         action). Lines on the same PO are grouped into one entry.
         """
+        if hasattr(self.order_id, '_check_qbo_ordering'):
+            self.order_id._check_qbo_ordering()
+
         lines_to_process = self.filtered(
             lambda l: not l.x_ordered
             and l.order_id.x_approval_state == 'approved'
